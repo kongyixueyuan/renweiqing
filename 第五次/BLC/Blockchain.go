@@ -9,6 +9,8 @@ import (
 	"os"
 	"encoding/hex"
 	"strconv"
+	"crypto/ecdsa"
+	"bytes"
 )
 
 //数据库的名字
@@ -60,11 +62,11 @@ func (blc *Blockchain) Printchain() {
 			fmt.Printf("TxHash:%x\n", tx.TxHash)
 			fmt.Println("Vins:")
 			for _, in := range tx.Vins {
-				fmt.Printf("TxHash:%x,Vout:%d,ScriptSig:%s\n", in.TxHash, in.Vout, in.ScriptSig)
+				fmt.Printf("TxHash:%x,Vout:%d,Signature:%x,PubKey:%x,\n", in.TxHash, in.Vout, in.Signature,in.PubKey)
 			}
 			fmt.Println("Vouts:")
 			for _, out := range tx.Vouts {
-				fmt.Println("Value:", out.Value, "  ScriptPubKey:", out.ScriptPubKey)
+				fmt.Printf("Value:%d,Ripemd160Hash:%x\n", out.Value, out.Ripemd160Hash)
 			}
 
 		}
@@ -208,7 +210,9 @@ func (blockchain *Blockchain) UnUTXOs(address string, txs []*Transaction) []*UTX
 		if tx.IsCoinbaseTransaction() == false {
 			for _, in := range tx.Vins {
 				//是否是指定地址的 TXInput
-				if in.UnLockWithAddress(address) {
+				publicKeyHash := Base58Decode([]byte(address))
+				ripemd160Hash := publicKeyHash[1 : len(publicKeyHash)-addressChecksumLen]
+				if in.UnLockRipemd160Hash(ripemd160Hash) {
 					// 转字符串
 					key := hex.EncodeToString(in.TxHash)
 					// 如果是，记录到spentTXOutputs
@@ -270,7 +274,9 @@ func (blockchain *Blockchain) UnUTXOs(address string, txs []*Transaction) []*UTX
 			if tx.IsCoinbaseTransaction() == false {
 				for _, in := range tx.Vins {
 					//是否能够解锁
-					if in.UnLockWithAddress(address) {
+					publicKeyHash := Base58Decode([]byte(address))
+					ripemd160Hash := publicKeyHash[1 : len(publicKeyHash)-addressChecksumLen]
+					if in.UnLockRipemd160Hash(ripemd160Hash) {
 						key := hex.EncodeToString(in.TxHash)
 						spentTXOutputs[key] = append(spentTXOutputs[key], in.Vout)
 					}
@@ -363,6 +369,13 @@ func (blockchain *Blockchain) MineNewBlock(from []string, to []string, amount []
 		txs = append(txs, tx)
 	}
 
+	for _, tx := range txs {
+		if blockchain.VerifyTransaction(tx) != true {
+			log.Panic("ERROR: Invalid transaction")
+		}
+	}
+
+
 	//1. 通过相关算法建立Transaction数组
 	var block *Block
 	//获取最新的区块
@@ -375,6 +388,7 @@ func (blockchain *Blockchain) MineNewBlock(from []string, to []string, amount []
 		}
 		return nil
 	})
+
 
 	//2. 建立新的区块
 	block = NewBlock(txs, block.Height+1, block.Hash)
@@ -402,4 +416,58 @@ func (blockchain *Blockchain) GetBalance(address string) int64 {
 		amount = amount + utxo.Output.Value
 	}
 	return amount
+}
+
+//通过 ID 找到一笔交易（这需要在区块链上迭代所有区块）
+func (bc *Blockchain) FindTransaction(ID []byte) (Transaction, error) {
+
+	bci := bc.Iterator()
+
+	for {
+		block := bci.Next()
+
+		for _, tx := range block.Txs {
+			if bytes.Compare(tx.TxHash, ID) == 0 {
+				return *tx, nil
+			}
+		}
+
+		var hashInt big.Int
+		hashInt.SetBytes(block.PrevBlockHash)
+		if big.NewInt(0).Cmp(&hashInt) == 0 {
+			break;
+		}
+	}
+
+	return Transaction{},nil
+}
+//传入一笔交易，找到它引用的交易，然后对它进行签名
+func (blockchain *Blockchain) SignTransaction(tx *Transaction, privateKey ecdsa.PrivateKey)  {
+	if tx.IsCoinbaseTransaction(){
+		return
+	}
+
+	prevTXs := make(map[string]Transaction)
+
+	for _,vin := range tx.Vins{
+		prevTX ,err := blockchain.FindTransaction(vin.TxHash)
+		if err !=nil{
+			log.Panic(err)
+		}
+		prevTXs[hex.EncodeToString(prevTX.TxHash)] = prevTX
+	}
+	tx.Sign(privateKey, prevTXs)
+}
+
+
+//传入一笔交易，找到它引用的交易，然后对它进行验证
+func (bc *Blockchain) VerifyTransaction(tx *Transaction) bool {
+	prevTXs := make(map[string]Transaction)
+
+	for _, vin := range tx.Vins {
+		prevTX, _ := bc.FindTransaction(vin.TxHash)
+		prevTXs[hex.EncodeToString(prevTX.TxHash)] = prevTX
+	}
+
+	return tx.Verify(prevTXs)
 }
