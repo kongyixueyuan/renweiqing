@@ -76,8 +76,68 @@ func Rwq_NewCoinbaseTX(to ,data string) *Rwq_Transaction  {
 // 转帐时生成交易
 func Rwq_NewUTXOTransaction(wallet *Rwq_Wallet,to string,amount int,UTXOSet *Rwq_UTXOSet,txs []*Rwq_Transaction) *Rwq_Transaction   {
 
+	// 如果本区块中，多笔转账
+	/**
+	第一种情况：
+	  A:10
+	  A->B 2
+	  A->C 4
+
+	  tx1:
+	      Vin:
+	           ATxID  out ...
+	      Vout:
+	           A : 8
+	           B : 2
+	  tx1:
+	      Vin:
+	           ATxID  out ...
+	      Vout:
+	           A : 4
+	           C : 4
+	第二种情况：
+	  A:10+10
+	  A->B 4
+	  A->C 8
+	**/
+
 	pubKeyHash := Rwq_HashPubKey(wallet.Rwq_PublicKey)
-	acc, validOutputs := UTXOSet.Rwq_FindSpendableOutputs(pubKeyHash, amount)
+	if len(txs) > 0 {
+		// 查的txs中的UTXO
+		utxo := Rwq_FindUTXOFromTransactions(txs)
+
+		// 找出当前钱包已经花费的
+		unspentOutputs := make(map[string][]int)
+		acc := 0
+		for txID,outs := range utxo {
+			for outIdx, out := range outs.Rwq_Outputs {
+				if out.Rwq_IsLockedWithKey(pubKeyHash) && acc < amount {
+					acc += out.Rwq_Value
+					unspentOutputs[txID] = append(unspentOutputs[txID], outIdx)
+				}
+			}
+		}
+
+		if acc >= amount { // 当前交易中的剩余余额可以支付
+			fmt.Println("txs>0 && acc >= amount")
+			return Rwq_NewUTXOTransactionEnd(wallet,to,amount,UTXOSet,acc,unspentOutputs,txs)
+		}else{
+			fmt.Println("txs>0 && acc < amount")
+			accLeft, validOutputs := UTXOSet.Rwq_FindSpendableOutputs(pubKeyHash,  amount - acc)
+			for k,v := range unspentOutputs{
+				validOutputs[k] = v
+			}
+			return Rwq_NewUTXOTransactionEnd(wallet,to,amount,UTXOSet,acc + accLeft,validOutputs,txs)
+		}
+	} else { //只是当前一笔交易
+		fmt.Println("txs==0")
+		acc, validOutputs := UTXOSet.Rwq_FindSpendableOutputs(pubKeyHash, amount)
+
+		return Rwq_NewUTXOTransactionEnd(wallet,to,amount,UTXOSet,acc,validOutputs,txs)
+	}
+}
+
+func Rwq_NewUTXOTransactionEnd(wallet *Rwq_Wallet,to string,amount int,UTXOSet *Rwq_UTXOSet,acc int,UTXO map[string][]int,txs []*Rwq_Transaction) *Rwq_Transaction {
 
 	if acc < amount {
 		log.Panic("账户余额不足")
@@ -86,30 +146,70 @@ func Rwq_NewUTXOTransaction(wallet *Rwq_Wallet,to string,amount int,UTXOSet *Rwq
 	var inputs []Rwq_TXInput
 	var outputs []Rwq_TXOutput
 	// 构造input
-	for txid,outs := range validOutputs{
-		txID,err := hex.DecodeString(txid)
-		if err !=nil{
+	for txid, outs := range UTXO {
+		txID, err := hex.DecodeString(txid)
+		if err != nil {
 			log.Panic(err)
 		}
 
-		for _,out := range outs{
-			input := Rwq_TXInput{txID,out,nil,wallet.Rwq_PublicKey}
-			inputs = append(inputs,input)
+		for _, out := range outs {
+			input := Rwq_TXInput{txID, out, nil, wallet.Rwq_PublicKey}
+			inputs = append(inputs, input)
 		}
 	}
 	// 生成交易输出
-	outputs = append(outputs,*Rwq_NewTXOutput(amount,to))
+	outputs = append(outputs, *Rwq_NewTXOutput(amount, to))
 	// 生成余额
 	if acc > amount {
-		outputs = append(outputs,*Rwq_NewTXOutput(acc-amount,string(wallet.Rwq_GetAddress())))
+		outputs = append(outputs, *Rwq_NewTXOutput(acc-amount, string(wallet.Rwq_GetAddress())))
 	}
 
-	tx := Rwq_Transaction{nil,inputs,outputs}
+	tx := Rwq_Transaction{nil, inputs, outputs}
 	tx.Rwq_ID = tx.Rwq_Hash()
 	// 签名
-	UTXOSet.Rwq_Blockchain.Rwq_SignTransaction(&tx,wallet.Rwq_PrivateKey)
+
+	//tx.String()
+	UTXOSet.Rwq_Blockchain.Rwq_SignTransaction(&tx, wallet.Rwq_PrivateKey,txs)
 
 	return &tx
+}
+
+
+// 找出交易中的utxo
+func Rwq_FindUTXOFromTransactions(txs []*Rwq_Transaction) map[string]Rwq_TXOutputs {
+	UTXO := make(map[string]Rwq_TXOutputs)
+	// 已经花费的交易txID : TXOutputs.index
+	spentTXOs := make(map[string][]int)
+	// 循环区块中的交易
+	for _, tx := range txs {
+		// 将区块中的交易hash，转为字符串
+		txID := hex.EncodeToString(tx.Rwq_ID)
+
+	Outputs:
+		for outIdx, out := range tx.Rwq_Vout { // 循环交易中的 TXOutputs
+			// Was the output spent?
+			// 如果已经花费的交易输出中，有此输出，证明已经花费
+			if spentTXOs[txID] != nil {
+				for _, spentOutIdx := range spentTXOs[txID] {
+					if spentOutIdx == outIdx { // 如果花费的正好是此笔输出
+						continue Outputs // 继续下一次循环
+					}
+				}
+			}
+
+			outs := UTXO[txID] // 获取UTXO指定txID对应的TXOutputs
+			outs.Rwq_Outputs = append(outs.Rwq_Outputs, out)
+			UTXO[txID] = outs
+		}
+
+		if tx.Rwq_IsCoinbase() == false { // 非创世区块
+			for _, in := range tx.Rwq_Vin {
+				inTxID := hex.EncodeToString(in.Rwq_Txid)
+				spentTXOs[inTxID] = append(spentTXOs[inTxID], in.Rwq_Vout)
+			}
+		}
+	}
+	return UTXO
 
 }
 
@@ -224,7 +324,7 @@ func (tx Rwq_Transaction) String()  {
 	for i, output := range tx.Rwq_Vout {
 		lines = append(lines, fmt.Sprintf("     Output %d:", i))
 		lines = append(lines, fmt.Sprintf("       Value:  %d", output.Rwq_Value))
-		lines = append(lines, fmt.Sprintf("       Script: %x", output.Rwq_PubKeyHash))
+		lines = append(lines, fmt.Sprintf("       PubKeyHash: %x", output.Rwq_PubKeyHash))
 	}
 	fmt.Println(strings.Join(lines, "\n"))
 }

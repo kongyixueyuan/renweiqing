@@ -17,3 +17,14 @@ func (cli *Rwq_CLI) rwq_getBalance(address string) {
 	balance := UTXOSet.Rwq_GetBalance(address)
 	fmt.Printf("地址:%s的余额为：%d\n", address, balance)
 }
+
+func (cli *Rwq_CLI) rwq_getBalanceAll() {
+	wallets,err := Rwq_NewWallets()
+	if err!=nil{
+		log.Panic(err)
+	}
+	balances := wallets.Rwq_GetBalanceAll()
+	for address,balance := range balances{
+		fmt.Printf("地址:%s的余额为：%d\n", address, balance)
+	}
+}

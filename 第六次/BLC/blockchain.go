@@ -49,6 +49,7 @@ func (bc *Rwq_Blockchain) Rwq_FindTransaction(ID []byte) (Rwq_Transaction, error
 			break
 		}
 	}
+	fmt.Printf("查找%x的交易失败",ID)
 	return Rwq_Transaction{}, errors.New("未找到交易")
 }
 
@@ -118,7 +119,7 @@ func Rwq_CreateBlockchain(address string) *Rwq_Blockchain {
 	cbtx := Rwq_NewCoinbaseTX(address, genesisCoinbaseData)
 	genesis := Rwq_NewGenesisBlock(cbtx)
 
-	genesis.String()
+	//genesis.String()
 
 	// 打开数据库，如果不存在自动创建
 	db, err := bolt.Open(dbFile, 0600, nil)
@@ -195,7 +196,7 @@ func (bc *Rwq_Blockchain) MineNewBlock(from []string, to []string, amount []stri
 			log.Panic("错误：转账金额需要大于0")
 		}
 		wallet := wallets.Rwq_GetWallet(address)
-		tx := Rwq_NewUTXOTransaction(&wallet, to[index], value, &UTXOSet, nil)
+		tx := Rwq_NewUTXOTransaction(&wallet, to[index], value, &UTXOSet, txs)
 		txs = append(txs, tx)
 	}
 
@@ -209,7 +210,7 @@ func (bc *Rwq_Blockchain) MineNewBlock(from []string, to []string, amount []stri
 
 	// 检查交易是否有效，验证签名
 	for _, tx := range txs {
-		if !bc.Rwq_VerifyTransaction(tx) {
+		if !bc.Rwq_VerifyTransaction(tx,txs) {
 			log.Panic("错误：无效的交易")
 		}
 	}
@@ -253,29 +254,47 @@ func (bc *Rwq_Blockchain) MineNewBlock(from []string, to []string, amount []stri
 }
 
 // 签名
-func (bc *Rwq_Blockchain) Rwq_SignTransaction(tx *Rwq_Transaction, privKey ecdsa.PrivateKey) {
+func (bc *Rwq_Blockchain) Rwq_SignTransaction(tx *Rwq_Transaction, privKey ecdsa.PrivateKey,txs []*Rwq_Transaction) {
 	prevTXs := make(map[string]Rwq_Transaction)
+
 	// 找到交易输入中，之前的交易
+	Vin:
 	for _, vin := range tx.Rwq_Vin {
+		for _, tx := range txs {
+			if bytes.Compare(tx.Rwq_ID, vin.Rwq_Txid) == 0 {
+				prevTX := *tx
+				prevTXs[hex.EncodeToString(prevTX.Rwq_ID)] = prevTX
+				continue Vin
+			}
+		}
+
 		prevTX, err := bc.Rwq_FindTransaction(vin.Rwq_Txid)
 		if err != nil {
 			log.Panic(err)
 		}
 		prevTXs[hex.EncodeToString(prevTX.Rwq_ID)] = prevTX
+
 	}
 
 	tx.Rwq_Sign(privKey, prevTXs)
 }
 
 // 验证签名
-func (bc *Rwq_Blockchain) Rwq_VerifyTransaction(tx *Rwq_Transaction) bool {
+func (bc *Rwq_Blockchain) Rwq_VerifyTransaction(tx *Rwq_Transaction,txs []*Rwq_Transaction) bool {
 	if tx.Rwq_IsCoinbase() {
 		return true
 	}
 
 	prevTXs := make(map[string]Rwq_Transaction)
-
+	Vin:
 	for _, vin := range tx.Rwq_Vin {
+		for _, tx := range txs {
+			if bytes.Compare(tx.Rwq_ID, vin.Rwq_Txid) == 0 {
+				prevTX := *tx
+				prevTXs[hex.EncodeToString(prevTX.Rwq_ID)] = prevTX
+				continue Vin
+			}
+		}
 		prevTX, err := bc.Rwq_FindTransaction(vin.Rwq_Txid)
 		if err != nil {
 			log.Panic(err)

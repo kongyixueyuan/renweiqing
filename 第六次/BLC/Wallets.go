@@ -86,3 +86,20 @@ func (ws *Rwq_Wallets)Rwq_SaveToFile()  {
 		log.Panic(err)
 	}
 }
+// 打印所有钱包的余额
+func (ws *Rwq_Wallets) Rwq_GetBalanceAll() map[string]int {
+	addresses := ws.Rwq_GetAddresses()
+	bc := Rwq_NewBlockchain()
+	defer bc.rwq_db.Close()
+	UTXOSet := Rwq_UTXOSet{bc}
+
+	result := make(map[string]int)
+	for _,address := range addresses{
+		if !Rwq_ValidateAddress(address) {
+			result[address] = -1
+		}
+		balance := UTXOSet.Rwq_GetBalance(address)
+		result[address] = balance
+	}
+	return result
+}

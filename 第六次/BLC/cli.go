@@ -16,10 +16,12 @@ func (cli *Rwq_CLI) printUsage() {
 	fmt.Println("  listaddresses - 打印钱包地址")
 	fmt.Println("  createblockchain -address ADDRESS - 创建区块链")
 	fmt.Println("  getbalance -address ADDRESS - 获取地址的余额")
+	fmt.Println("  getbalanceall - 打印钱包地址的余额")
 	fmt.Println("  printchain - 打印区块链中的所有区块数据")
 	fmt.Println("  send -from FROM -to TO -amount AMOUNT 转账")
 	fmt.Println("  reindexutxo - 重建UTXO set")
 	fmt.Println("  printutxo - 打印所有的UTXO set")
+
 }
 // 验证参数
 func (cli *Rwq_CLI) validateArgs()  {
@@ -40,6 +42,7 @@ func (cli Rwq_CLI) Rwq_Run()  {
 	reindexUTXOCmd := flag.NewFlagSet("reindexutxo", flag.ExitOnError)
 	sendCmd := flag.NewFlagSet("send", flag.ExitOnError)
 	printUTXOCmd := flag.NewFlagSet("printutxo", flag.ExitOnError)
+	getBalanceAllCmd := flag.NewFlagSet("getbalanceall", flag.ExitOnError)
 
 	getBalanceAddress := getBalanceCmd.String("address", "", "查询余额地址")
 	createBlockchainAddress := createBlockchainCmd.String("address", "", "创建创世区块地址")
@@ -65,6 +68,8 @@ func (cli Rwq_CLI) Rwq_Run()  {
 		err = sendCmd.Parse(os.Args[2:])
 	case "printutxo":
 		err = printUTXOCmd.Parse(os.Args[2:])
+	case "getbalanceall":
+		err = getBalanceAllCmd.Parse(os.Args[2:])
 	default:
 		cli.printUsage()
 		os.Exit(1)
@@ -127,5 +132,9 @@ func (cli Rwq_CLI) Rwq_Run()  {
 	if printUTXOCmd.Parsed(){
 		cli.rwq_printutxo()
 	}
+	if getBalanceAllCmd.Parsed(){
+		cli.rwq_getBalanceAll()
+	}
+
 
 }
