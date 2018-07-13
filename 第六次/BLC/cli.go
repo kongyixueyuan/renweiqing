@@ -16,7 +16,7 @@ func (cli *Rwq_CLI) printUsage() {
 	fmt.Println("  listaddresses - 打印钱包地址")
 	fmt.Println("  createblockchain -address ADDRESS - 创建区块链")
 	fmt.Println("  getbalance -address ADDRESS - 获取地址的余额")
-	fmt.Println("  getbalanceall - 打印钱包地址的余额")
+	fmt.Println("  getbalanceall - 打印所有钱包地址的余额")
 	fmt.Println("  printchain - 打印区块链中的所有区块数据")
 	fmt.Println("  send -from FROM -to TO -amount AMOUNT 转账")
 	fmt.Println("  reindexutxo - 重建UTXO set")
