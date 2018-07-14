@@ -129,19 +129,32 @@ cp blockchain_genesis.db blockchain_3002.db
 ./main send -from 1BDcTrNULhy1yarFvKTeYYivCjwR5y39Fr -to 12nJP2HkvT7MsknXEaU8twJpmeuS6CAgY2 -amount 5
 
 # 查询余额
-./main getbalance -address 1HJS1wZYqxM78g8kRFsyXmfHT8SwecvEeB
-3
-./main getbalance -address 1BDcTrNULhy1yarFvKTeYYivCjwR5y39Fr
-1
-./main getbalance -address 146igzxoYs1VcTfR1H2wzxd1cFA35K5Usb
-5
-./main getbalance -address 12nJP2HkvT7MsknXEaU8twJpmeuS6CAgY2
-5
+./main getbalanceall
+地址:1BDcTrNULhy1yarFvKTeYYivCjwR5y39Fr的余额为：1
+地址:146igzxoYs1VcTfR1H2wzxd1cFA35K5Usb的余额为：5
+地址:12nJP2HkvT7MsknXEaU8twJpmeuS6CAgY2的余额为：5
+地址:1HJS1wZYqxM78g8kRFsyXmfHT8SwecvEeB的余额为：3
 
 # 现在查看钱包节点钱包余额，没有任何变化
 # 因为没有启动服务器
 ./main startnode
 
 # 钱包节点停止服务，再查询余额，发现正常
+
+# 继续测试同时多笔转账
+# ADDRESS3 转 ADDRESS1 2个币，ADDRESS4 转 ADDRESS2 3个币
+./main send -from '["146igzxoYs1VcTfR1H2wzxd1cFA35K5Usb","12nJP2HkvT7MsknXEaU8twJpmeuS6CAgY2"]' -to '["1HJS1wZYqxM78g8kRFsyXmfHT8SwecvEeB","1BDcTrNULhy1yarFvKTeYYivCjwR5y39Fr"]' -amount '["2","3"]'
+
+# 启动服务器
+./main startnode
+
+# 结束服务器后
+# 查询余额
+./main getbalanceall
+地址:146igzxoYs1VcTfR1H2wzxd1cFA35K5Usb的余额为：3
+地址:12nJP2HkvT7MsknXEaU8twJpmeuS6CAgY2的余额为：2
+地址:1HJS1wZYqxM78g8kRFsyXmfHT8SwecvEeB的余额为：5
+地址:1BDcTrNULhy1yarFvKTeYYivCjwR5y39Fr的余额为：4
+
 # 至此测试内容结束
 ```
