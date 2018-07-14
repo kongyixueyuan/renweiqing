@@ -178,7 +178,7 @@ func rwq_handleConnecton(conn net.Conn, bc *Rwq_Blockchain) {
 		log.Panic(err)
 	}
 	command := rwq_bytesToCommand(request[:commandLength])
-	fmt.Printf("接收到命令：%s", command)
+	fmt.Printf("接收到命令：%s\n", command)
 
 	switch command {
 	case "addr": // 添加新节点

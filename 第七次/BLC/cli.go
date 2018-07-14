@@ -38,7 +38,7 @@ func (cli Rwq_CLI) Rwq_Run()  {
 
 	nodeID := os.Getenv("NODE_ID")
 	if nodeID == "" {
-		fmt.Printf("NODE_ID未设置,export NODE_ID=3000")
+		fmt.Printf("NODE_ID未设置,export NODE_ID=3000\n")
 		os.Exit(1)
 	}
 
