@@ -25,7 +25,7 @@ export NODE_ID=3000
 # 从钱包节点回来
 # 查看所有钱包地址
 ./main listaddresses
-ADDRESS
+1FUdTVBF6e5u9bdwF5fBHdFyVD4aneygeR
 
 # 转账
 ./main send -from 1FUdTVBF6e5u9bdwF5fBHdFyVD4aneygeR -to 1HJS1wZYqxM78g8kRFsyXmfHT8SwecvEeB -amount 8 -mine
