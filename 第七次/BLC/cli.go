@@ -5,6 +5,7 @@ import (
 	"os"
 	"flag"
 	"log"
+	"strings"
 )
 
 type Rwq_CLI struct{}
@@ -118,17 +119,26 @@ func (cli Rwq_CLI) Rwq_Run()  {
 		}
 
 		// 检查参数，有效性
-		from := JSONToArray(*sendFrom)
-		to := JSONToArray(*sendTo)
+		// 判断是否是json格式
+		if strings.Contains(*sendFrom,"[") && strings.Contains(*sendFrom,"]") {
+			from := JSONToArray(*sendFrom)
+			to := JSONToArray(*sendTo)
 
-		for index,fromAdress := range from{
-			if !Rwq_ValidateAddress(fromAdress) || !Rwq_ValidateAddress(to[index]) {
-				fmt.Println("地址无效。。")
-				os.Exit(1)
+			for index, fromAdress := range from {
+				if !Rwq_ValidateAddress(fromAdress) || !Rwq_ValidateAddress(to[index]) {
+					fmt.Println("地址无效。。")
+					os.Exit(1)
+				}
 			}
+			amount := JSONToArray(*sendAmount)
+			cli.rwq_send(from, to, amount, nodeID, *sendMine)
+		}else{
+			from := []string{*sendFrom}
+			to := []string{*sendTo}
+			amount := []string{*sendAmount}
+
+			cli.rwq_send(from, to, amount, nodeID, *sendMine)
 		}
-		amount := JSONToArray(*sendAmount)
-		cli.rwq_send(from, to, amount,nodeID, *sendMine)
 	}
 	if getBalanceCmd.Parsed() {
 		if *getBalanceAddress == "" {

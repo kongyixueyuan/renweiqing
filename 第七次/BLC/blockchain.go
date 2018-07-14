@@ -213,7 +213,11 @@ func (bc *Rwq_Blockchain) MineNewBlock(from []string, to []string, amount []stri
 		return newBlock
 	}else{
 		// 如果不立即挖矿，将交易写到内存中
-		rwq_sendTx(knownNodes[0],txs[0])
+		//var txs_all []Rwq_Transaction
+		//for _,value := range txs{
+		//	txs_all= append(txs_all, *value)
+		//}
+		rwq_sendTxs(knownNodes[0],txs)
 		return nil
 	}
 

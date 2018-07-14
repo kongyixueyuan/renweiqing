@@ -30,18 +30,7 @@ func (tx Rwq_Transaction) Rwq_IsCoinbase() bool {
 	// Vin 第一条数据的Vout 为 -1
 	return len(tx.Rwq_Vin) == 1 && len(tx.Rwq_Vin[0].Rwq_Txid) == 0 && tx.Rwq_Vin[0].Rwq_Vout == -1
 }
-// 将交易序列化
-func (tx Rwq_Transaction) Rwq_Serialize() []byte  {
-	var encoded bytes.Buffer
 
-	enc := gob.NewEncoder(&encoded)
-	err := enc.Encode(tx)
-
-	if err != nil{
-		log.Panic(err)
-	}
-	return encoded.Bytes()
-}
 
 // 将交易进行Hash
 func (tx *Rwq_Transaction) Rwq_Hash() []byte  {
@@ -329,6 +318,19 @@ func (tx Rwq_Transaction) String()  {
 	fmt.Println(strings.Join(lines, "\n"))
 }
 
+
+// 将交易序列化
+func (tx Rwq_Transaction) Rwq_Serialize() []byte  {
+	var encoded bytes.Buffer
+
+	enc := gob.NewEncoder(&encoded)
+	err := enc.Encode(tx)
+
+	if err != nil{
+		log.Panic(err)
+	}
+	return encoded.Bytes()
+}
 // 反序列化交易
 func Rwq_DeserializeTransaction(data []byte) Rwq_Transaction {
 	var transaction Rwq_Transaction
@@ -340,4 +342,30 @@ func Rwq_DeserializeTransaction(data []byte) Rwq_Transaction {
 	}
 
 	return transaction
+}
+
+// 将交易数组序列化
+func Rwq_SerializeTransactions(txs []*Rwq_Transaction) [][]byte  {
+
+	var txsHash [][]byte
+	for _,tx := range txs{
+		txsHash = append(txsHash, tx.Rwq_Serialize())
+	}
+	return txsHash
+}
+
+// 反序列化交易数组
+func Rwq_DeserializeTransactions(data [][]byte) []Rwq_Transaction {
+	var txs []Rwq_Transaction
+	for _,tx := range data {
+		var transaction Rwq_Transaction
+		decoder := gob.NewDecoder(bytes.NewReader(tx))
+		err := decoder.Decode(&transaction)
+		if err != nil {
+			log.Panic(err)
+		}
+
+		txs = append(txs, transaction)
+	}
+	return txs
 }

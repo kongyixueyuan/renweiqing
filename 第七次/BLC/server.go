@@ -46,9 +46,9 @@ type rwq_inv struct {
 	Rwq_Items    [][]byte
 }
 
-type rwq_tx struct {
+type rwq_txs struct {
 	Rwq_AddFrom     string
-	Rwq_Transaction []byte
+	Rwq_Transactions [][]byte
 }
 
 type rwq_version struct {
@@ -157,7 +157,13 @@ func rwq_sendBlock(addr string, b *Rwq_Block) {
 
 // 发送交易内容命令
 func rwq_sendTx(addr string, tx *Rwq_Transaction) {
-	data := rwq_tx{nodeAddress, tx.Rwq_Serialize()}
+	txs := []*Rwq_Transaction{tx}
+	rwq_sendTxs(addr,txs)
+}
+// 发送交易内容命令
+func rwq_sendTxs(addr string, txs []*Rwq_Transaction) {
+
+	data := rwq_txs{nodeAddress, Rwq_SerializeTransactions(txs)}
 	payload := rwq_gobEncode(data)
 	request := append(rwq_commandToBytes("tx"), payload...)
 
@@ -185,9 +191,9 @@ func rwq_handleConnecton(conn net.Conn, bc *Rwq_Blockchain) {
 		rwq_handleGetBlocks(request, bc)
 	case "getdata": // 将单个交易或区块的内容 返回给请求节点
 		rwq_handleGetData(request, bc)
-	case "tx": // 添加新的交易,交易数量大于2，矿工节点挖矿
+	case "tx": // 添加新的交易,交易数量大于2，矿工节点挖矿,如果是主节点，进行分发交易
 		rwq_handleTx(request, bc)
-	case "version": // 检查是否需要同步数据
+	case "version": // 检查是否需要同步数据，根据区块的height
 		rwq_handleVersion(request, bc)
 	default:
 		fmt.Println("未知命令!")
@@ -348,7 +354,7 @@ func rwq_handleGetData(request []byte, bc *Rwq_Blockchain) {
 // 处理交易
 func rwq_handleTx(request []byte, bc *Rwq_Blockchain) {
 	var buff bytes.Buffer
-	var payload rwq_tx
+	var payload rwq_txs
 
 	buff.Write(request[commandLength:])
 	dec := gob.NewDecoder(&buff)
@@ -357,58 +363,61 @@ func rwq_handleTx(request []byte, bc *Rwq_Blockchain) {
 		log.Panic(err)
 	}
 
-	txData := payload.Rwq_Transaction
-	tx := Rwq_DeserializeTransaction(txData)
-	mempool[hex.EncodeToString(tx.Rwq_ID)] = tx
+	txData := payload.Rwq_Transactions
+	txsDes := Rwq_DeserializeTransactions(txData)
 
-	// 如果是主节点
-	if nodeAddress == knownNodes[0] {
-		for _, node := range knownNodes {
-			// 给其他节点分发，添加交易
-			if node != nodeAddress && node != payload.Rwq_AddFrom {
-				rwq_sendInv(node, "tx", [][]byte{tx.Rwq_ID})
-			}
-		}
-	} else {
-		// 如果交易池中有两条交易 并且当前是挖矿节点
-		if len(mempool) >= 2 && len(miningAddress) > 0 {
-		MineTransactions:
-			var txs []*Rwq_Transaction
+	for _,tx := range txsDes {
+		mempool[hex.EncodeToString(tx.Rwq_ID)] = tx
 
-			for id := range mempool {
-				tx := mempool[id]
-				if bc.Rwq_VerifyTransaction(&tx,txs) {
-					txs = append(txs, &tx)
-				}
-			}
-
-			if len(txs) == 0 {
-				fmt.Println("所有交易不可用...")
-				return
-			}
-
-			cbTx := Rwq_NewCoinbaseTX(miningAddress, "")
-			txs = append(txs, cbTx)
-
-			newBlock := bc.Rwq_MineBlock(txs)
-			UTXOSet := Rwq_UTXOSet{bc}
-			UTXOSet.Update(newBlock)
-
-			fmt.Println("挖到新的区块!")
-
-			for _, tx := range txs {
-				txID := hex.EncodeToString(tx.Rwq_ID)
-				delete(mempool, txID)
-			}
-
+		// 如果是主节点
+		if nodeAddress == knownNodes[0] {
 			for _, node := range knownNodes {
-				if node != nodeAddress {
-					rwq_sendInv(node, "block", [][]byte{newBlock.Rwq_Hash})
+				// 给其他节点分发，添加交易
+				if node != nodeAddress && node != payload.Rwq_AddFrom {
+					rwq_sendInv(node, "tx", [][]byte{tx.Rwq_ID})
 				}
 			}
+		} else {
+			// 如果交易池中有两条交易 并且当前是挖矿节点
+			if len(mempool) >= 2 && len(miningAddress) > 0 {
+			MineTransactions:
+				var txs []*Rwq_Transaction
 
-			if len(mempool) > 0 {
-				goto MineTransactions
+				for id := range mempool {
+					tx := mempool[id]
+					if bc.Rwq_VerifyTransaction(&tx, txs) {
+						txs = append(txs, &tx)
+					}
+				}
+
+				if len(txs) == 0 {
+					fmt.Println("交易不可用...")
+					break
+				}
+
+				cbTx := Rwq_NewCoinbaseTX(miningAddress, "")
+				txs = append(txs, cbTx)
+
+				newBlock := bc.Rwq_MineBlock(txs)
+				UTXOSet := Rwq_UTXOSet{bc}
+				UTXOSet.Update(newBlock)
+
+				fmt.Println("挖到新的区块!")
+
+				for _, tx := range txs {
+					txID := hex.EncodeToString(tx.Rwq_ID)
+					delete(mempool, txID)
+				}
+
+				for _, node := range knownNodes {
+					if node != nodeAddress {
+						rwq_sendInv(node, "block", [][]byte{newBlock.Rwq_Hash})
+					}
+				}
+
+				if len(mempool) > 0 {
+					goto MineTransactions
+				}
 			}
 		}
 	}
