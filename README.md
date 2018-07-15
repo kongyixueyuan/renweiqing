@@ -14,6 +14,7 @@ Usage:
 
 ```
 #### 2018/07/10 第六次作业
+#### 2018/07/17 第七次作业
 ##### 截止目前实现功能如下：
 - 创建钱包
   - 公钥、私钥
@@ -48,12 +49,16 @@ Usage:
 - 重建UTXO集
   - 重建会比较花费时间
 - 查看所有UTXO集中的内容
-
+- 多节点通讯功能
+  - 主节点
+  - 钱包节点
+  - 矿工节点
 
 数据库：[BoltDB](https://github.com/boltdb/bolt)
 [ripemd160](https://github.com/golang/crypto)
 
 [第六次测试文档](https://github.com/kongyixueyuan/renweiqing/blob/master/%E7%AC%AC%E5%85%AD%E6%AC%A1/test.md)
+[第七次测试文档](https://github.com/kongyixueyuan/renweiqing/blob/master/%E7%AC%AC%E4%B8%83%E6%AC%A1/test.md)
 
 ----
 #### 钱包地址生成方式
