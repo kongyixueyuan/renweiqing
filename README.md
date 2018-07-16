@@ -59,7 +59,7 @@ Usage:
 
 - [第六次测试文档](https://github.com/kongyixueyuan/renweiqing/blob/master/%E7%AC%AC%E5%85%AD%E6%AC%A1/test.md)
 - [第七次测试文档](https://github.com/kongyixueyuan/renweiqing/blob/master/%E7%AC%AC%E4%B8%83%E6%AC%A1/test.md)
-- [第八次作业说明(测试说明参考第七次测试文档)](https://github.com/kongyixueyuan/renweiqing/blob/master/%E7%AC%AC%E4%B8%83%E6%AC%A1/test.md)
+- [第八次作业说明(测试说明参考第七次测试文档)](https://github.com/kongyixueyuan/renweiqing/blob/master/%E7%AC%AC%E5%85%AB%E6%AC%A1/%E4%BD%9C%E4%B8%9A%E8%AF%B4%E6%98%8E.md)
 
 ----
 #### 钱包地址生成方式
