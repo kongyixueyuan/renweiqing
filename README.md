@@ -57,8 +57,9 @@ Usage:
 数据库：[BoltDB](https://github.com/boltdb/bolt)
 [ripemd160](https://github.com/golang/crypto)
 
-[第六次测试文档](https://github.com/kongyixueyuan/renweiqing/blob/master/%E7%AC%AC%E5%85%AD%E6%AC%A1/test.md)
-[第七次测试文档](https://github.com/kongyixueyuan/renweiqing/blob/master/%E7%AC%AC%E4%B8%83%E6%AC%A1/test.md)
+- [第六次测试文档](https://github.com/kongyixueyuan/renweiqing/blob/master/%E7%AC%AC%E5%85%AD%E6%AC%A1/test.md)
+- [第七次测试文档](https://github.com/kongyixueyuan/renweiqing/blob/master/%E7%AC%AC%E4%B8%83%E6%AC%A1/test.md)
+- [第八次作业说明(测试说明参考第七次测试文档)](https://github.com/kongyixueyuan/renweiqing/blob/master/%E7%AC%AC%E4%B8%83%E6%AC%A1/test.md)
 
 ----
 #### 钱包地址生成方式
