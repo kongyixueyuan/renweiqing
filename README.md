@@ -15,11 +15,12 @@ Usage:
 ```
 #### 2018/07/10 第六次作业
 #### 2018/07/17 第七次作业
+#### 2018/07/29 第九次作业-毕业答辩
 ##### 截止目前实现功能如下：
 - 创建钱包
   - 公钥、私钥
   - 椭圆曲线加密
-  - Base58Encode(version + ripemd160(sha256(PubKey)) + sha256(sha256(PubKeyHash))[:addressChecksumLen])
+  - Base58Encode(version + ripemd160(sha256(PubKey)) + sha256(sha256(vresion+pubKeyHash))[:addressChecksumLen])
   - 钱包地址可以到 http://blockchain.info/ 验证
 - 查看所有钱包地址
 - 创建创世区块
@@ -53,6 +54,8 @@ Usage:
   - 主节点
   - 钱包节点
   - 矿工节点
+- 使用go-libp2p，模拟简单的p2p
+- 使用robertkrimen/otto，模拟简单的虚拟机,可以调用js写的智能合约
 
 数据库：[BoltDB](https://github.com/boltdb/bolt)
 [ripemd160](https://github.com/golang/crypto)
