@@ -33,7 +33,7 @@ Usage:
     - 区块链初始金额
 - 多笔交易
   - 支持点对点交易
-    - ./bc send -from '["1MWd2iQoYyjQFcUW1GU48qxCNqoici7p72"]' -to '["1Hp2wo6jiGghei1eDMX8Y5v44JdNXxaaKZ"]' -amount '["4"]'
+    - ./bc send -from 1MWd2iQoYyjQFcUW1GU48qxCNqoici7p72 -to 1Hp2wo6jiGghei1eDMX8Y5v44JdNXxaaKZ -amount 4
   - 支持多对多交易(多笔交易在一个区块中打包)
     - ./bc send -from '["1MWd2iQoYyjQFcUW1GU48qxCNqoici7p72","1MWd2iQoYyjQFcUW1GU48qxCNqoici7p72"]' -to '["1Hp2wo6jiGghei1eDMX8Y5v44JdNXxaaKZ","1PE646PctnSH5hRfUWMQGqJerm8Emx9gCf"]' -amount '["5","5"]'
   - 挖矿
